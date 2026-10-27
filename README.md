@@ -213,14 +213,20 @@ MIFS `0x0C/0x03` 控制 `RMTS`；`0x0C/0x02` 是存在标志；`0x0C/0x06` 在�
 status `0x03`：
 
 ```bash
-sudo python3 iot_status.py --reset
+sudo python3 iot_status.py --reset       # 软复位固件（status 0x03）
+sudo python3 iot_status.py --reconnect   # 让模组重连已保存 Wi-Fi（status 0x0C）
+sudo python3 iot_status.py --wifi-status # 读 Wi-Fi 状态 + SSID（status 0x07）
+sudo python3 iot_status.py --model       # 读模型（status 0x0B）
 ```
 
-它让模组自己软重启（不切 EC 电源），通常比整机断电重启快。这个命令会短暂断开模组，
-所以只在它离线/卡住时用；当前已在线时不要随手发。
+`--wifi-status` 实测：
 
-`ConnectWiFi`（IPC `0x72`）和 `ReadWiFiStatus`（IPC `0x71`）也在官方服务里，但还没做成
-Linux 命令；目前刷新用 `--reset` 或 `mifs_iot.py off/on`。
+```
+wifi status: 5 (ConnectedToCloud) ssid='root 的 Xiaomi 17 Max'
+```
+
+`--reconnect` 发的是官方 ConnectWiFi 命令；当前在线时发送不会掉线，断网场景还需要一次
+真机测试。软复位会让模组短暂离线，所以只在离线/卡住时用。
 
 ### MIFS 其他功能
 
@@ -329,7 +335,7 @@ docs/iot.md              IoT 模组/事件/官方栈研究记录
 python3 -m unittest discover -s tests -v
 ```
 
-当前 18 项通过。
+当前 20 项通过。
 
 ## 回滚
 

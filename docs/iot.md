@@ -568,16 +568,35 @@ sudo python3 iot_status.py --reset
 它会软重启模组固件（不切 EC 电源），用于 Wi-Fi 断线后迟迟不重连的情况；代价是模组会
 短暂离线。当前网络已在线时不要随手发。
 
-官方服务里还有：
+官方 IPC 和底层 status 的对应关系（十进制 IPC 类型）：
 
-| IPC | 功能 | 状态 |
-| --- | --- | --- |
-| `0x71` | `ReadWiFiStatus` | 未实现 |
-| `0x72` | `ConnectWiFi` | 未实现 |
-| `0x6A` | `ResetDevice` | 已实现：status `0x03` |
+| IPC | 功能 | mailbox status | 状态 |
+| --- | --- | --- | --- |
+| `110` (`0x6E`) | `ReadWiFiStatus` | `0x07` | ✅ `--wifi-status` |
+| `113` (`0x71`) | `GetModel` | `0x0B` | ✅ `--model` |
+| `114` (`0x72`) | `ConnectWiFi` | `0x0C` | ⚠️ `--reconnect`，断网场景待测 |
+| `106` (`0x6A`) | `ResetDevice` | `0x03` | ✅ `--reset` |
 
-如果只想“让模组重连 Wi-Fi”而不重启固件，后续可以继续逆 `ConnectWiFi` 的 mailbox 命令；
-目前先用软复位或 `mifs_iot.py off/on`。
+`ReadWiFiStatus` 的回复：
+
+```
+header: 55 07 01 03 05 07 01 03
+                          ^^ status code (5 = ConnectedToCloud)
+reply:  24 01 08 3e 16 "root 的 Xiaomi 17 Max" ...
+                       ^^ SSID length
+```
+
+实测：
+
+```
+$ sudo python3 iot_status.py --wifi-status
+wifi status: 5 (ConnectedToCloud) ssid='root 的 Xiaomi 17 Max'
+$ sudo python3 iot_status.py --model
+xiaomi.laptop.n57sr
+```
+
+`--reconnect` 发 `0x0C`；当前在线时发送不会掉线，但还没有在“真的断网”场景下验证它能否
+加速重连。如果不行，退回到 `--reset` 或 `mifs_iot.py off/on`。
 
 ## 6. 结论
 

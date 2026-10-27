@@ -14,7 +14,8 @@ from iot_event import (
 )
 from iot_mailbox import BASE, STATUS
 from iot_status import (FW_VERSION, RESET_DEVICE, SHUTING, SUSPENDING,
-                        WIN_READY, get_firmware_version, send_status)
+                        WIN_READY, get_firmware_version, parse_wifi_reply,
+                        send_status)
 from mifs import read_fans
 
 
@@ -113,6 +114,11 @@ class StatusTest(unittest.TestCase):
         send_status(RESET_DEVICE, bus=self.mbox)
         self.assertIn((STATUS, bytes([0x55, RESET_DEVICE, 1, 2,
                                       0x55, RESET_DEVICE, 1, 3])), self.mbox.writes)
+
+    def test_wifi_reply(self):
+        ssid = "root 的 Xiaomi 17 Max".encode()
+        reply = bytes([0x24, 0x01, 0x08, 0x3E, len(ssid)]) + ssid + b"\x00" * 8
+        self.assertEqual(parse_wifi_reply(reply), "root 的 Xiaomi 17 Max")
 
     def test_firmware_reply(self):
         version = b"1.0.3_0010"
