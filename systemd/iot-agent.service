@@ -1,0 +1,14 @@
+[Unit]
+Description=Xiaomi IoT event agent (shutdown/sleep/wake)
+After=multi-user.target
+
+[Service]
+Type=simple
+# Ensure the patched redmi-wmi owns the WMI event device.
+ExecStartPre=/bin/sh /home/xsf/Projects/redmi_book/ensure-redmi-event.sh
+ExecStart=/usr/bin/python3 /home/xsf/Projects/redmi_book/iot_agent.py --source input --execute --allow-shutdown --allow-sleep
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

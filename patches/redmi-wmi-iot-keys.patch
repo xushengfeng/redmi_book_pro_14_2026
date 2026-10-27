@@ -1,0 +1,15 @@
+--- a/redmi-wmi.c
++++ b/redmi-wmi.c
+@@ -55,6 +55,12 @@
+ 	{KE_KEY, 0x00011401, {KEY_F16}},
+ 	{KE_KEY, 0x00011501, {KEY_F17}},
+ 
++	/* Xiaomi IoT module: shutdown / sleep / wake */
++	{KE_KEY, 0x00012A01, {KEY_MACRO1}},
++	{KE_KEY, 0x00012A02, {KEY_MACRO2}},
++	{KE_KEY, 0x00012A03, {KEY_MACRO3}},
++
++
+ 	{KE_END}
+ };
+ 

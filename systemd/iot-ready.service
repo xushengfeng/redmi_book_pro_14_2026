@@ -1,0 +1,10 @@
+[Unit]
+Description=Report IOT_WIN_READY to the Xiaomi IoT module
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /home/xsf/Projects/redmi_book/iot_status.py 0x10
+TimeoutStartSec=15
+
+[Install]
+WantedBy=multi-user.target
