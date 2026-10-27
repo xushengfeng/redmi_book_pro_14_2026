@@ -121,6 +121,9 @@ python3 ntag5.py restore backup.bin
        └─ iot-resume.service  恢复 WIN_READY ack
 ```
 
+IoT 模组本身不控制性能模式/充电阈值；这些是 host 侧 MIFS/EC 的功能。模组只读 EC
+遥测并负责远程唤醒/状态上报。
+
 事件在 MIFS `HID_EVENT20` 里表现为 32-bit payload：
 
 | payload（十进制） | 字节 | 含义 |
@@ -179,6 +182,11 @@ MIFS `0x0C/0x03` 控制 `RMTS`；`0x0C/0x02` 是存在标志；`0x0C/0x06` 在�
 不能作为绑定判据。
 
 ### MIFS 其他功能
+
+> 性能模式、充电阈值、麦克风静音属于 **MIFS/EC**（ACPI `\_SB.PC00.WMID`），
+> 不是 IoT 模组（`IOTD0000`）。关掉 IoT 模组后这些功能仍然可用；IoT 模组只负责
+> 远程唤醒、状态 ack 和把 EC 温度/电池数据转发到米家。
+
 
 ```bash
 sudo python3 mifs.py perf get
