@@ -296,6 +296,13 @@ python3 ntag5.py restore backup-original.bin
 - `acpi_call` 和 `/dev/mem` 都是底层接口；MIFS 写 EC 前先确认状态，NFC 写前先备份。
 - `redmi-wmi` patch 在内核升级后需要重新运行 `sudo ./build-redmi-wmi.sh`。
 
+## License
+
+除非单独说明，本项目使用 MIT（见 `LICENSE`）。
+
+`patches/` 里的 `redmi-wmi-iot-keys.patch` 修改的是 GPL-2.0 的 Linux 内核驱动，
+因此该 patch 按 GPL-2.0 提供；详见 `patches/README.md`。
+
 ## 免责声明
 
 本项目是个人互操作性研究，与小米/Redmi 没有隶属关系，也不代表官方支持。仓库不包含
