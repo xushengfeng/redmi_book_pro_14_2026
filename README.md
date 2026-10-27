@@ -93,7 +93,8 @@ python3 ntag5.py restore backup.bin
 - `write-*` 只重写 block 1 开始到 TLV 结束的区域，不碰 CC（block 0）和计数器块。
 - NTAG5 EEPROM 写周期约 10 ms，工具已加延时。
 - 手机端可能把标签显示成只读；I2C 侧写入是另一条通道，已实测可写。
-- 这台机器的原始备份是 `backup-original.bin`，SHA-256：
+- 这台机器的原始备份是 `backup-original.bin`（**本地文件，已被 `.gitignore` 忽略**；
+  重新克隆后请先用 `ntag5.py dump` 生成自己的备份），SHA-256：
 
 ```
 14194c6356021c00e76b2fe956307417bcf47f41e1cd263fd017c9c61f8965ba
@@ -239,7 +240,7 @@ shutdown event
 
 ```
 ntag5.py                 NTAG5 I2C / NDEF 工具
-backup-original.bin      原始 2048 B 用户区备份（设备相关）
+backup-original.bin      原始 2048 B 用户区备份（本地/忽略，设备相关）
 miio_discover.py         局域网 miIO hello 发现
 mifs.py                  性能/充电/麦克风
 mifs_iot.py              IoT 模组电源/状态
@@ -294,6 +295,21 @@ python3 ntag5.py restore backup-original.bin
   disable/stop。
 - `acpi_call` 和 `/dev/mem` 都是底层接口；MIFS 写 EC 前先确认状态，NFC 写前先备份。
 - `redmi-wmi` patch 在内核升级后需要重新运行 `sudo ./build-redmi-wmi.sh`。
+
+## 免责声明
+
+本项目是个人互操作性研究，与小米/Redmi 没有隶属关系，也不代表官方支持。仓库不包含
+小米驱动、固件、签名、云 token、账号信息或 Wi-Fi 密码；只包含本机逆向得到的协议事实和
+自写代码。请自行遵守当地法律和小米服务条款，风险自负。
+
+`patches/` 里的 patch 针对 Linux in-tree 的 GPL-2.0 `redmi-wmi` 驱动。
+
+公开发布前注意：
+
+- git 提交会公开作者姓名/邮箱；需要匿名的话先改 `user.name`/`user.email` 或 amend。
+- 文档里保留了本机 BT MAC（`08:EB:21:B4:4E:10`）作为协议示例；介意的话替换成占位符。
+- `backup-original.bin` 是设备相关数据，已不进入 git；不要手工提交。
+- 不要提交小米官方驱动/固件（`IoTService.exe`、`IoTDriver.sys`、`NTAG5Driver.sys` 等）。
 
 ## 参考
 

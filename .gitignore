@@ -9,5 +9,7 @@ venv/
 *.tmp
 *.ko
 .DS_Store
+# device-specific NFC dumps; keep locally only
 ntag5-*.bin
+backup-*.bin
 backup-test.bin
