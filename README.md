@@ -49,7 +49,7 @@ I2C: /dev/i2c-1      7-bit address 0x54
 - Python 3（全部工具只用标准库）
 - `i2c-dev` + `i2c` 组（NFC）
 - `acpi_call`（MIFS）
-- 内核头文件（重建 `redmi-wmi`）
+- 内核头文件、`curl`、`patch`、`make`（重建 `redmi-wmi`）
 - systemd
 
 ```bash
