@@ -13,8 +13,8 @@ from iot_event import (
     simulate,
 )
 from iot_mailbox import BASE, STATUS
-from iot_status import (FW_VERSION, SHUTING, SUSPENDING, WIN_READY,
-                        get_firmware_version, send_status)
+from iot_status import (FW_VERSION, RESET_DEVICE, SHUTING, SUSPENDING,
+                        WIN_READY, get_firmware_version, send_status)
 from mifs import read_fans
 
 
@@ -107,6 +107,12 @@ class StatusTest(unittest.TestCase):
         self.assertEqual(SUSPENDING, 0x0F)
         self.assertEqual(WIN_READY, 0x10)
         self.assertEqual(FW_VERSION, 0x0A)
+        self.assertEqual(RESET_DEVICE, 0x03)
+
+    def test_reset_sequence(self):
+        send_status(RESET_DEVICE, bus=self.mbox)
+        self.assertIn((STATUS, bytes([0x55, RESET_DEVICE, 1, 2,
+                                      0x55, RESET_DEVICE, 1, 3])), self.mbox.writes)
 
     def test_firmware_reply(self):
         version = b"1.0.3_0010"

@@ -550,6 +550,35 @@ sudo python3 iot_status.py --firmware
 当前模组版本是 **1.0.3_0010**，米家提示可升级 **1.0.3_0030**。Linux 目前只能**读**版本，
 不能升级；升级走米家/Windows PC Manager/云端。
 
+### 5.10 软复位/刷新
+
+`IoTService.exe` 的 IPC 类型 `0x6A`（`ResetDevice`）使用与状态上报相同的 mailbox
+序列，status 为：
+
+```
+0x03 = IOT_RESET_DEVICE
+```
+
+`iot_status.py --reset` 复现这条序列：
+
+```bash
+sudo python3 iot_status.py --reset
+```
+
+它会软重启模组固件（不切 EC 电源），用于 Wi-Fi 断线后迟迟不重连的情况；代价是模组会
+短暂离线。当前网络已在线时不要随手发。
+
+官方服务里还有：
+
+| IPC | 功能 | 状态 |
+| --- | --- | --- |
+| `0x71` | `ReadWiFiStatus` | 未实现 |
+| `0x72` | `ConnectWiFi` | 未实现 |
+| `0x6A` | `ResetDevice` | 已实现：status `0x03` |
+
+如果只想“让模组重连 Wi-Fi”而不重启固件，后续可以继续逆 `ConnectWiFi` 的 mailbox 命令；
+目前先用软复位或 `mifs_iot.py off/on`。
+
 ## 6. 结论
 
 - Linux 没有现成可用的 IoT 远程唤醒驱动。

@@ -207,6 +207,21 @@ sudo python3 mifs_iot.py off --yes
 MIFS `0x0C/0x03` 控制 `RMTS`；`0x0C/0x02` 是存在标志；`0x0C/0x06` 在绑定后仍为 0，
 不能作为绑定判据。
 
+### 刷新 / 软复位
+
+掉线后不一定要给 EC 断电。官方 `ResetDevice` 的 IPC 类型是 `0x6A`，底层是 mailbox
+status `0x03`：
+
+```bash
+sudo python3 iot_status.py --reset
+```
+
+它让模组自己软重启（不切 EC 电源），通常比整机断电重启快。这个命令会短暂断开模组，
+所以只在它离线/卡住时用；当前已在线时不要随手发。
+
+`ConnectWiFi`（IPC `0x72`）和 `ReadWiFiStatus`（IPC `0x71`）也在官方服务里，但还没做成
+Linux 命令；目前刷新用 `--reset` 或 `mifs_iot.py off/on`。
+
 ### MIFS 其他功能
 
 > 性能模式、充电阈值、麦克风静音属于 **MIFS/EC**（ACPI `\_SB.PC00.WMID`），

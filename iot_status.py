@@ -23,12 +23,14 @@ WIN_READY = 0x10
 SHUTING = 0x0E
 SUSPENDING = 0x0F
 FW_VERSION = 0x0A
+RESET_DEVICE = 0x03
 
 NAMES = {
     WIN_READY: "IOT_WIN_READY",
     SHUTING: "IOT_SHUTING",
     SUSPENDING: "IOT_SUSPENDING",
     FW_VERSION: "IOT_FW_VERSION",
+    RESET_DEVICE: "IOT_RESET_DEVICE",
 }
 
 
@@ -83,6 +85,23 @@ def get_firmware_version(bus: Mailbox | None = None) -> str:
     return resp[1:1 + length].decode("ascii", "replace")
 
 
+def reset_module(bus: Mailbox | None = None) -> bytes:
+    """Soft-reset the IoT module via the official status 0x03 sequence.
+
+    This is the mailbox path behind IoTService IPC type 0x6A (ResetDevice).
+    It does not cut EC power; the module reboots its own firmware/Wi-Fi.
+    """
+    own = bus is None
+    mbox = bus or Mailbox()
+    try:
+        send_status(RESET_DEVICE, bus=mbox)
+        time.sleep(0.2)
+        return mbox.read(STATUS, 16)
+    finally:
+        if own:
+            mbox.close()
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -93,10 +112,17 @@ def main() -> None:
     ap.add_argument("--quiet", action="store_true")
     ap.add_argument("--firmware", action="store_true",
                     help="read the IoT module firmware version")
+    ap.add_argument("--reset", action="store_true",
+                    help="soft-reset the IoT module (status 0x03)")
     args = ap.parse_args()
 
     if args.firmware:
         print(get_firmware_version())
+        return
+
+    if args.reset:
+        resp = reset_module()
+        print(f"reset sent; reply={resp.hex()}")
         return
 
     detail = bytes.fromhex(args.detail)
