@@ -227,7 +227,11 @@ python3 mifs.py temp            # 标准 hwmon 温度
 ```
 
 风扇：v2 固件 `0x0D` 返回 `0xE000`，改读 EC window `+0x69`/`+0x6B`（u16 LE）。
-温度：v2 固件 `0x16` 也不支持，使用 `coretemp`/`acpitz`/`nvme`/`iwlwifi`。
+温度：v2 固件 `0x16` 也不支持，使用标准 hwmon `coretemp`/`acpitz`/`nvme`/`iwlwifi`。
+
+**风扇只能读，不能直接控制**：v2 下 `0x14/0x15` 也返回 `0xE000`，hwmon 没有 `pwm1`，
+`fan_boost` 是 v1 接口，在这台机器上会被固件拒绝。只能通过性能模式间接影响风扇曲线；
+不建议直接写 EC 寄存器。
 
 原始值优先；不同 MIFS 版本的 label 可能不同。实测已恢复原值：
 `perf 9`、`charge 100%`、`mic unmuted`。

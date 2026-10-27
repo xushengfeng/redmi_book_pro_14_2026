@@ -72,6 +72,19 @@ fan GPU: 2820 RPM
 `/sys/class/hwmon/hwmon4`（`bitland_mifs`）也有 fan1/2/3，但当前 v2 固件下全是 0；
 等上游 MIFS v2 补丁进入内核后会由驱动填充。
 
+### 风扇控制
+
+**不能直接控制转速。** v2 固件没有暴露 PWM/风扇控制接口：
+
+- `0x14`（MAX_FAN_SWITCH）、`0x15`（MAX_FAN_SPEED）都返回 `0xE000`
+- hwmon 只有 `fan*_input`，没有 `pwm1`
+- `bitland-mifs-wmi` 的 `fan_boost` sysfs 写的是 `0x14`，在这台机器上同样被拒绝
+- `fancontrol`/`pwmconfig` 需要 `pwm1`，无法使用
+- 直接写 EC 风扇寄存器没有公开/安全的寄存器定义，不建议
+
+能做的只有间接影响：通过性能模式 `0x08` 切换 quiet/balanced/speed/extreme，让 EC 使用
+不同的风扇曲线。风扇本身仍由 EC 固件闭环控制。
+
 ## 温度
 
 MIFS `0x16` 在 v2 上不支持，温度用标准 hwmon：
