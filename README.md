@@ -4,21 +4,21 @@ Linux 下这台机器的 NFC 标签与小米 IoT 模组的实现、研究记录�
 
 ## 状态
 
-| 模块 | 实际硬件 | Linux 状态 |
-| --- | --- | --- |
-| NFC | NXP NTAG 5 boost（NTA5332）I2C 标签 | ✅ 读写 NDEF、vCard、Wi-Fi、raw、备份恢复 |
+| 模块           | 实际硬件                                                 | Linux 状态                                                                        |
+| -------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| NFC            | NXP NTAG 5 boost（NTA5332）I2C 标签                      | ✅ 读写 NDEF、vCard、Wi-Fi、raw、备份恢复                                         |
 | IoT / 远程唤醒 | 独立小米 always-on 2.4 GHz Wi-Fi 模组（ACPI `IOTD0000`） | ✅ S5 唤醒、远程关机、状态 ack、温度/电量遥测；配网/绑定/固件升级仍走米家/Windows |
-| MIFS | Intel PTL + Bitland EC | ✅ 性能模式、充电阈值、麦克风静音、风扇/温度、模组电源 |
+| MIFS           | Intel PTL + Bitland EC                                   | ✅ 性能模式、充电阈值、麦克风静音、风扇/温度、模组电源                            |
 
 > 重要：笔记本的 NFC 是**标签**，不是读卡器。它能让手机“碰一碰”读到 Linux 写入的 NDEF，但**不能**读门禁卡、银行卡、公交卡，也不能克隆 UID。
 
 ## 三个领域
 
-| 领域 | 硬件/接口 | 主要工具 | 说明 |
-| --- | --- | --- | --- |
-| NFC | NTAG5，I2C `/dev/i2c-1` 0x54 | `ntag5.py` | 标签读写；不是读卡器 |
-| MIFS | ACPI `\_SB.PC00.WMID` + EC | `mifs.py`、`mifs_iot.py` | 性能/充电/麦克风/风扇/温度/IoT 电源 |
-| IoT | `IOTD0000` + WMI/mailbox | `iot_status.py`、`iot_event.py`、`iot_agent.py` | 远程唤醒/关机/ack/遥测 |
+| 领域 | 硬件/接口                    | 主要工具                                        | 说明                                |
+| ---- | ---------------------------- | ----------------------------------------------- | ----------------------------------- |
+| NFC  | NTAG5，I2C `/dev/i2c-1` 0x54 | `ntag5.py`                                      | 标签读写；不是读卡器                |
+| MIFS | ACPI `\_SB.PC00.WMID` + EC   | `mifs.py`、`mifs_iot.py`                        | 性能/充电/麦克风/风扇/温度/IoT 电源 |
+| IoT  | `IOTD0000` + WMI/mailbox     | `iot_status.py`、`iot_event.py`、`iot_agent.py` | 远程唤醒/关机/ack/遥测              |
 
 边界：
 
@@ -152,11 +152,11 @@ IoT 模组本身不控制性能模式/充电阈值；这些是 host 侧 MIFS/EC 
 
 事件在 MIFS `HID_EVENT20` 里表现为 32-bit payload：
 
-| payload（十进制） | 字节 | 含义 |
-| --- | --- | --- |
-| `76289` | `01 2A 01` | shutdown |
-| `141825` | `01 2A 02` | sleep |
-| `207361` | `01 2A 03` | wake |
+| payload（十进制） | 字节       | 含义     |
+| ----------------- | ---------- | -------- |
+| `76289`           | `01 2A 01` | shutdown |
+| `141825`          | `01 2A 02` | sleep    |
+| `207361`          | `01 2A 03` | wake     |
 
 `redmi-wmi` 已打 patch，把这三个 payload 映射成 `KEY_MACRO1/2/3`：
 
@@ -179,10 +179,10 @@ mailbox：
 
 状态值：
 
-| 值 | 含义 |
-| --- | --- |
-| `0x10` | `IOT_WIN_READY` |
-| `0x0E` | `IOT_SHUTING` |
+| 值     | 含义             |
+| ------ | ---------------- |
+| `0x10` | `IOT_WIN_READY`  |
+| `0x0E` | `IOT_SHUTING`    |
 | `0x0F` | `IOT_SUSPENDING` |
 | `0x0A` | `IOT_FW_VERSION` |
 
@@ -238,21 +238,21 @@ python3 mifs.py temp            # 标准 hwmon 温度
 
 ### 支持矩阵
 
-| 能力 | Linux | 说明 |
-| --- | --- | --- |
-| S5 远程唤醒 | ✅ 实测 | 模组硬件触发 EC/PMIC |
-| 远程关机 | ✅ 实测 | 米家关机 → WMI payload → `systemctl poweroff` |
-| 开机/恢复 ack | ✅ 实测 | `iot-ready` / `iot-resume` |
-| 温度/电量/充电状态 | ✅ 实测 | 模组直读 EC，不依赖 OS 服务 |
-| 模组电源/存在状态 | ✅ 实测 | `mifs_iot.py` |
-| 模组固件版本 | ✅ 实测 | `iot_status.py --firmware` |
-| 睡眠 | ⚠️ 代码已实现，未真机验证 | `--allow-sleep` 已启用 |
-| 性能/充电/麦克风 | ✅ 实测 | `mifs.py` |
-| PC 端改模组 Wi-Fi | ❌ | 用米家/Windows PC Manager |
-| 绑定/解绑、固件升级 | ❌ | 米家/云端/Windows |
-| 本地 miIO 控制 | ❌ | token 为 `ff`×16，只在云端/flash |
-| 远程桌面/文件管理 | ❌ | 需要 Windows 远程控制应用 |
-| NFC 读卡/克隆 | ❌ | 这是标签，不是读卡器 |
+| 能力                | Linux                     | 说明                                          |
+| ------------------- | ------------------------- | --------------------------------------------- |
+| S5 远程唤醒         | ✅ 实测                   | 模组硬件触发 EC/PMIC                          |
+| 远程关机            | ✅ 实测                   | 米家关机 → WMI payload → `systemctl poweroff` |
+| 开机/恢复 ack       | ✅ 实测                   | `iot-ready` / `iot-resume`                    |
+| 温度/电量/充电状态  | ✅ 实测                   | 模组直读 EC，不依赖 OS 服务                   |
+| 模组电源/存在状态   | ✅ 实测                   | `mifs_iot.py`                                 |
+| 模组固件版本        | ✅ 实测                   | `iot_status.py --firmware`                    |
+| 睡眠                | ⚠️ 代码已实现，未真机验证 | `--allow-sleep` 已启用                        |
+| 性能/充电/麦克风    | ✅ 实测                   | `mifs.py`                                     |
+| PC 端改模组 Wi-Fi   | ❌                        | 用米家/Windows PC Manager                     |
+| 绑定/解绑、固件升级 | ❌                        | 米家/云端/Windows                             |
+| 本地 miIO 控制      | ❌                        | token 为 `ff`×16，只在云端/flash              |
+| 远程桌面/文件管理   | ❌                        | 需要 Windows 远程控制应用                     |
+| NFC 读卡/克隆       | ❌                        | 这是标签，不是读卡器                          |
 
 ### 限制说明
 
@@ -358,12 +358,6 @@ python3 ntag5.py restore backup-original.bin
 
 `patches/` 里的 patch 针对 Linux in-tree 的 GPL-2.0 `redmi-wmi` 驱动。
 
-公开发布前注意：
-
-- git 提交会公开作者姓名/邮箱；需要匿名的话先改 `user.name`/`user.email` 或 amend。
-- 文档里保留了本机 BT MAC（`08:EB:21:B4:4E:10`）作为协议示例；介意的话替换成占位符。
-- `backup-original.bin` 是设备相关数据，已不进入 git；不要手工提交。
-- 不要提交小米官方驱动/固件（`IoTService.exe`、`IoTDriver.sys`、`NTAG5Driver.sys` 等）。
 
 ## 参考
 
@@ -372,3 +366,7 @@ python3 ntag5.py restore backup-original.bin
 - XiControl 项目：<https://github.com/Oksion/XiControl>
   - WMI/MIFS 协议、IoT 远程唤醒、官方驱动分析
 - 小米 NFC 标签协议解析：<https://www.xfy9326.top/posts/mi_nfc_protocol/>
+
+## 友链
+
+[linux.do](https://linux.do)
