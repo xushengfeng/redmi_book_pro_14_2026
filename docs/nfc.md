@@ -1,5 +1,8 @@
 # NTAG5 NFC 标签笔记
 
+> 领域：NFC（I2C 标签），与 MIFS/EC、IoT 模组相互独立。三个领域的索引见
+> [README.md](README.md)。
+
 ## 1. 硬件
 
 ```

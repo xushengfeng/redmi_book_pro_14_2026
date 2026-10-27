@@ -15,6 +15,7 @@ from iot_event import (
 from iot_mailbox import BASE, STATUS
 from iot_status import (FW_VERSION, SHUTING, SUSPENDING, WIN_READY,
                         get_firmware_version, send_status)
+from mifs import read_fans
 
 
 class FakeMailbox:
@@ -162,6 +163,14 @@ class AgentTest(unittest.TestCase):
         r.dispatch(Event("unknown", 0x99, 0, b"\x01\x99\x00"))
         r._status.assert_not_called()
         r._run.assert_not_called()
+
+
+class SensorTest(unittest.TestCase):
+    def test_fan_ec_window(self):
+        mbox = FakeMailbox()
+        mbox.mem[0x369:0x36B] = (2631).to_bytes(2, "little")
+        mbox.mem[0x36B:0x36D] = (2730).to_bytes(2, "little")
+        self.assertEqual(read_fans(bus=mbox), {"CPU": 2631, "GPU": 2730})
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-# Redmi Book Pro 14 2026（TM2426）Linux NFC / IoT
+# Redmi Book Pro 14 2026（TM2426）Linux NFC / MIFS / IoT
 
 Linux 下这台机器的 NFC 标签与小米 IoT 模组的实现、研究记录和工具集。
 
@@ -8,9 +8,25 @@ Linux 下这台机器的 NFC 标签与小米 IoT 模组的实现、研究记录�
 | --- | --- | --- |
 | NFC | NXP NTAG 5 boost（NTA5332）I2C 标签 | ✅ 读写 NDEF、vCard、Wi-Fi、raw、备份恢复 |
 | IoT / 远程唤醒 | 独立小米 always-on 2.4 GHz Wi-Fi 模组（ACPI `IOTD0000`） | ✅ S5 唤醒、远程关机、状态 ack、温度/电量遥测；配网/绑定/固件升级仍走米家/Windows |
-| MIFS | Intel PTL + Bitland EC | ✅ 性能模式、充电阈值、麦克风静音、模组电源 |
+| MIFS | Intel PTL + Bitland EC | ✅ 性能模式、充电阈值、麦克风静音、风扇/温度、模组电源 |
 
 > 重要：笔记本的 NFC 是**标签**，不是读卡器。它能让手机“碰一碰”读到 Linux 写入的 NDEF，但**不能**读门禁卡、银行卡、公交卡，也不能克隆 UID。
+
+## 三个领域
+
+| 领域 | 硬件/接口 | 主要工具 | 说明 |
+| --- | --- | --- | --- |
+| NFC | NTAG5，I2C `/dev/i2c-1` 0x54 | `ntag5.py` | 标签读写；不是读卡器 |
+| MIFS | ACPI `\_SB.PC00.WMID` + EC | `mifs.py`、`mifs_iot.py` | 性能/充电/麦克风/风扇/温度/IoT 电源 |
+| IoT | `IOTD0000` + WMI/mailbox | `iot_status.py`、`iot_event.py`、`iot_agent.py` | 远程唤醒/关机/ack/遥测 |
+
+边界：
+
+- NFC 完全不经过 EC/网络，只走 I2C。
+- MIFS 是 host 固件/EC；关掉 IoT 模组后性能/充电/麦克风/风扇/温度仍然可用。
+- IoT 模组负责远程唤醒、关机/睡眠事件和把 EC 遥测转发米家，不控制性能/充电阈值。
+- 详细分领域文档：[docs/README.md](docs/README.md)、[docs/nfc.md](docs/nfc.md)、
+  [docs/mifs.md](docs/mifs.md)、[docs/iot.md](docs/iot.md)。
 
 ## 硬件识别
 
@@ -27,11 +43,21 @@ I2C: /dev/i2c-1      7-bit address 0x54
 - 原始 NDEF 是小米 `com.xiaomi.mi_connect_service:externaltype`，含 BT MAC 和
   `TAG_DISCOVERED / MIRROR`
 
+### MIFS
+
+```
+\_SB.PC00.WMID   HID = PNP0C14, _UID = "MIFS"
+WMAA: GET/SET 0x08 perf, 0x10/0x02 charge, 0x0A/0x05 mic, 0x0C/0x03 IoT power
+风扇 tach: EC window 0xFE0B0300 + 0x69/0x6B
+温度: 标准 hwmon（coretemp/acpitz/nvme/iwlwifi）
+```
+
+详见 [docs/mifs.md](docs/mifs.md)。
+
 ### IoT
 
 ```
 \_SB.PC00.IOTD   HID = IOTD0000
-\_SB.PC00.WMID   HID = PNP0C14, _UID = "MIFS"
 ```
 
 - 模组：`xiaomi.laptop.p52` 一类独立米家设备，自带 2.4 GHz Wi-Fi、DID、固件
@@ -196,7 +222,12 @@ sudo python3 mifs.py charge set 80     # 40/50/60/70/80/100
 sudo python3 mifs.py mic get
 sudo python3 mifs.py mic mute
 sudo python3 mifs.py mic unmute
+sudo python3 mifs.py fan        # CPU/GPU RPM，从 EC window 读
+python3 mifs.py temp            # 标准 hwmon 温度
 ```
+
+风扇：v2 固件 `0x0D` 返回 `0xE000`，改读 EC window `+0x69`/`+0x6B`（u16 LE）。
+温度：v2 固件 `0x16` 也不支持，使用 `coretemp`/`acpitz`/`nvme`/`iwlwifi`。
 
 原始值优先；不同 MIFS 版本的 label 可能不同。实测已恢复原值：
 `perf 9`、`charge 100%`、`mic unmuted`。
@@ -243,6 +274,8 @@ shutdown event
 - raw key：`EV_KEY KEY_MACRO1 value=1`
 - 固件版本：`1.0.3_0010`
 - MIFS：`perf 9 → 2 → 9`，`charge 100 → 80 → 100`，`mic 1 → 0 → 1`
+- 风扇：`CPU 2560 RPM`、`GPU 2820 RPM`
+- 温度：`coretemp Package 34.0 C`、`acpitz 27.8 C`、`nvme 28.9 C`、`iwlwifi 28.0 C`
 
 ## 项目结构
 
@@ -265,8 +298,10 @@ install-iot-ready.sh     安装开机/恢复 ack 服务
 install-iot-agent.sh     安装关机/睡眠/唤醒 agent
 systemd/                 service 模板
 tests/                   单元测试
+docs/README.md           三个领域的索引和边界
 docs/nfc.md              NTAG5 协议/内存布局
-docs/iot.md              IoT/MIFS/WMAA/官方栈研究记录
+docs/mifs.md             MIFS/EC：性能/充电/麦克风/风扇/温度
+docs/iot.md              IoT 模组/事件/官方栈研究记录
 ```
 
 ## 测试
@@ -275,7 +310,7 @@ docs/iot.md              IoT/MIFS/WMAA/官方栈研究记录
 python3 -m unittest discover -s tests -v
 ```
 
-当前 17 项通过。
+当前 18 项通过。
 
 ## 回滚
 

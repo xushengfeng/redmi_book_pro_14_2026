@@ -17,8 +17,11 @@ with the bitland-mifs-wmi v2 mapping.
 from __future__ import annotations
 
 import argparse
+import glob
 import os
 import sys
+
+from iot_mailbox import Mailbox
 
 METHOD = r"\_SB.PC00.WMID.WMAA"
 PROC = "/proc/acpi/call"
@@ -52,6 +55,14 @@ CHARGE_LEVELS = {
     40: 8,
 }
 
+# MIFS v2 firmware has no WMI fan function (0x0D returns 0xE000).  The v2
+# kernel patch reads the two tachometers from the EC window at 0xFE0B0300.
+EC_WINDOW = 0xFE0B0300
+FAN_TACHS = {
+    0x69: "CPU",
+    0x6B: "GPU",
+}
+
 
 class MifsError(RuntimeError):
     pass
@@ -81,6 +92,44 @@ def call(func: int, sub: int, value: int = 0, op: int = GET) -> bytes:
 
 def value32(reply: bytes) -> int:
     return int.from_bytes(reply[6:10], "little")
+
+
+def read_fans(bus: Mailbox | None = None) -> dict[str, int]:
+    own = bus is None
+    mbox = bus or Mailbox()
+    try:
+        return {
+            name: int.from_bytes(mbox.read(EC_WINDOW + off, 2), "little")
+            for off, name in FAN_TACHS.items()
+        }
+    finally:
+        if own:
+            mbox.close()
+
+
+def read_temps() -> list[tuple[str, str, float]]:
+    out: list[tuple[str, str, float]] = []
+    for path in sorted(glob.glob("/sys/class/hwmon/hwmon*")):
+        try:
+            with open(os.path.join(path, "name")) as f:
+                chip = f.read().strip()
+        except OSError:
+            continue
+        for inp in sorted(glob.glob(os.path.join(path, "temp*_input"))):
+            try:
+                with open(inp) as f:
+                    raw = int(f.read().strip())
+            except (OSError, ValueError):
+                continue
+            label = ""
+            label_path = inp.replace("_input", "_label")
+            try:
+                with open(label_path) as f:
+                    label = f.read().strip()
+            except OSError:
+                pass
+            out.append((chip, label, raw / 1000.0))
+    return out
 
 
 def perf_get() -> int:
@@ -134,6 +183,9 @@ def main() -> None:
     cset = cs.add_parser("set")
     cset.add_argument("percent", type=int, choices=sorted(CHARGE_LEVELS))
 
+    p = sub.add_parser("fan", help="read EC fan tachometers")
+    p = sub.add_parser("temp", help="read standard hwmon temperatures")
+
     p = sub.add_parser("mic", help="microphone mute")
     ms = p.add_subparsers(dest="action", required=True)
     ms.add_parser("get")
@@ -156,6 +208,14 @@ def main() -> None:
             else:
                 code, pct = charge_set(args.percent)
                 print(f"charge code={code} limit={pct}%")
+        elif args.cmd == "fan":
+            for name, rpm in read_fans().items():
+                state = "stopped/idle" if rpm == 0 else f"{rpm} RPM"
+                print(f"fan {name}: {state}")
+        elif args.cmd == "temp":
+            for chip, label, temp in read_temps():
+                suffix = f" {label}" if label else ""
+                print(f"{chip}{suffix}: {temp:.1f} C")
         elif args.cmd == "mic":
             if args.action == "get":
                 raw, muted = mic_get()
@@ -163,7 +223,7 @@ def main() -> None:
             else:
                 raw, muted = mic_set(args.action == "mute")
                 print(f"mic raw={raw} {'muted' if muted else 'unmuted'}")
-    except MifsError as e:
+    except (MifsError, OSError) as e:
         sys.exit(f"error: {e}")
 
 
